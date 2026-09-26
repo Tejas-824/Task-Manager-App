@@ -1,27 +1,24 @@
-import jwt
 from functools import wraps
 from flask import request, jsonify
+from supabase import create_client
 from config import Config
+
+# separate client just for verifying tokens
+_verify_client = create_client(Config.SUPABASE_URL, Config.SUPABASE_SERVICE_KEY)
 
 def get_user_from_token(token):
     """
-    When someone logs in via Google on the frontend, Supabase gives them
-    a JWT (a signed token proving who they are). The frontend sends that
-    token to our backend on every request in the Authorization header.
-    Here we decode it and check the signature is valid using our
-    Supabase JWT secret. If it's valid, we trust the user id inside it.
+    Instead of manually decoding the JWT ourselves, we ask Supabase directly
+    'hey, is this token valid, and who does it belong to?'
+    This avoids any mismatch issues with signing key types (HS256 vs ECC).
     """
     try:
-        payload = jwt.decode(
-            token,
-            Config.SUPABASE_JWT_SECRET,
-            algorithms=["HS256"],
-            audience="authenticated"
-        )
-        return payload  # contains 'sub' (user id) and 'email'
-    except jwt.ExpiredSignatureError:
+        response = _verify_client.auth.get_user(token)
+        if response and response.user:
+            return {"sub": response.user.id, "email": response.user.email}
         return None
-    except jwt.InvalidTokenError:
+    except Exception as e:
+        print(f"Token verification failed: {e}")
         return None
 
 
