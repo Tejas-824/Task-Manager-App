@@ -17,8 +17,8 @@ task they created gets completed.
 
 ## Live Links
 
-- Frontend (open this to use the app): [ADD YOUR VERCEL URL HERE]
-- Backend API: [ADD YOUR RENDER URL HERE]
+- Frontend : https://frontend-eight-omega-66.vercel.app
+- Backend API: https://task-manager-app-crl9.onrender.com
 
 ## What the app can do
 
