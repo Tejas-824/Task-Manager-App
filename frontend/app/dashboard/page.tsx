@@ -29,6 +29,8 @@ export default function Dashboard() {
   const [description, setDescription] = useState("");
   const [assignedTo, setAssignedTo] = useState("");
   const [loading, setLoading] = useState(true);
+  const [creating, setCreating] = useState(false);
+  const [completingId, setCompletingId] = useState<string | null>(null);
 
   const getToken = async () => {
     const { data } = await supabase.auth.getSession();
@@ -64,36 +66,40 @@ export default function Dashboard() {
   }, []);
 
   const handleCreateTask = async (e: React.FormEvent) => {
-    e.preventDefault();
-    const token = await getToken();
+  e.preventDefault();
+  setCreating(true);
+  const token = await getToken();
 
-    await fetch(`${BACKEND_URL}/api/tasks`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${token}`,
-      },
-      body: JSON.stringify({
-        title,
-        description,
-        assigned_to: assignedTo || null,
-      }),
-    });
+  await fetch(`${BACKEND_URL}/api/tasks`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify({
+      title,
+      description,
+      assigned_to: assignedTo || null,
+    }),
+  });
 
-    setTitle("");
-    setDescription("");
-    setAssignedTo("");
-    fetchTasks();
-  };
+  setTitle("");
+  setDescription("");
+  setAssignedTo("");
+  await fetchTasks();
+  setCreating(false);
+};
 
   const handleCompleteTask = async (taskId: string) => {
-    const token = await getToken();
-    await fetch(`${BACKEND_URL}/api/tasks/${taskId}/complete`, {
-      method: "PATCH",
-      headers: { Authorization: `Bearer ${token}` },
-    });
-    fetchTasks();
-  };
+  setCompletingId(taskId);
+  const token = await getToken();
+  await fetch(`${BACKEND_URL}/api/tasks/${taskId}/complete`, {
+    method: "PATCH",
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  await fetchTasks();
+  setCompletingId(null);
+};
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
@@ -189,20 +195,21 @@ export default function Dashboard() {
               ))}
             </select>
             <button
-              type="submit"
-              style={{
-                padding: "10px 18px",
-                backgroundColor: "#2563eb",
-                color: "#fff",
-                border: "none",
-                borderRadius: "6px",
-                cursor: "pointer",
-                fontSize: "14px",
-                fontWeight: 600,
-              }}
-            >
-              Create Task
-            </button>
+  type="submit"
+  disabled={creating}
+  style={{
+    padding: "10px 18px",
+    backgroundColor: creating ? "#93b4f0" : "#2563eb",
+    color: "#fff",
+    border: "none",
+    borderRadius: "6px",
+    cursor: creating ? "not-allowed" : "pointer",
+    fontSize: "14px",
+    fontWeight: 600,
+  }}
+>
+  {creating ? "Creating..." : "Create Task"}
+</button>
           </form>
         </div>
 
@@ -233,9 +240,17 @@ export default function Dashboard() {
               )}
               <span style={pendingBadge}>Pending</span>
             </div>
-            <button onClick={() => handleCompleteTask(task.id)} style={completeButtonStyle}>
-              Mark Complete
-            </button>
+            <button
+  onClick={() => handleCompleteTask(task.id)}
+  disabled={completingId === task.id}
+  style={{
+    ...completeButtonStyle,
+    opacity: completingId === task.id ? 0.6 : 1,
+    cursor: completingId === task.id ? "not-allowed" : "pointer",
+  }}
+>
+  {completingId === task.id ? "Updating..." : "Mark Complete"}
+</button>
           </div>
         ))}
 
